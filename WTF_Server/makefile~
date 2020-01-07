@@ -1,0 +1,15 @@
+all: WTF_Server
+
+WTF_Server: Server.o Server_Functions.o
+	gcc Server.o Server_Functions.o -lpthread -o WTFServer -lcrypto
+
+	echo "Build Done!"
+
+Server.o: Server.c
+	gcc -c -Wall Server.c -lpthread -lcrypto
+
+Server_Functions.o: Server_Functions.c Server_Functions.h
+	gcc -c -Wall Server_Functions.c -lcrypto
+
+clean:
+	rm -f WTF *.o
