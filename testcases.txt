@@ -4,51 +4,63 @@ Server command:
 --> This command opens up a connection where all the client can  make connection and join and work on project.
 
 Client Commands:
-•  ./WTF configure <IP> <Port>
+â€¢  ./WTF configure <IP> <Port>
 ->This Commands takes two inputs, IP  address of server and Port at which server is listening to.
 ->This commands save this IP and Port into  .Configure file for future uses.
 ->This .Configure file stays in directory until user runs make clean command.   
 
-• ./WTF checkout <project name>
-->This commands take project name  as input and check if this project exists on Client side of the Repository, and if it does than it will print a message "Project already exists on client side".
--> If the project does not exists on  Client side then this project will connect to server and fetch this whole project from server throrugh socket and creates a project folder and recreate files that Server had in it's project directory. At sucessful completion Client prints out sucess message "checkout command Successful!".
+â€¢ ./WTF checkout <project name>
+->This commands take project name  as input and check if this project exists on Client side of the Repository, and if it does than 
+  it will print a message "Project already exists on client side".
+-> If the project does not exists on  Client side then this project will connect to server and fetch this whole project 
+  from server throrugh socket and creates a project folder and recreate files that Server had in it's project directory. 
+  At sucessful completion Client prints out sucess message "checkout command Successful!".
  	
-•./WTF create <Projectname>
--> This command takes a project name and create this project to server side with manifest file initalized to version 0 and then  server send it to clieint and client create same prject in it's own directory.
+â€¢./WTF create <Projectname>
+-> This command takes a project name and create this project to server side with manifest file initalized to version 0 and then  
+  server send it to clieint and client create same prject in it's own directory.
 --> This command only works if Server doesn't contain this project before calling create.
 
-•./WTF destroy <Projectname>
--> This command takes a project name and destroy this project from server side by removing all files and manifest file from it's directory.
+â€¢./WTF destroy <Projectname>
+-> This command takes a project name and destroy this project from server side by removing all files and manifest file from
+   it's directory.
 --> This command only works if Server contain this project before calling destroy.
 
-•./WTF add <Projectname> <filename>
+â€¢./WTF add <Projectname> <filename>
 -->This command add file to project folder on client side.
 --> This command will only work if projectname folder exists, and also filename  file exists in that folder.
 --> This functions add filename file to Client's manifest.
 
-•./WTF remove <Projectname> <filename>
+â€¢./WTF remove <Projectname> <filename>
 --> This function removes filename from manifest file in Client side of the project if exists.
 --> on sucessful completion of remove it prints out "[C]: Project Removed!".
 
-•./WTF currentversion  <Projectname>
+â€¢./WTF currentversion  <Projectname>
 -->This commands prints out all the file and it's version number on command line for this projectname, which is on server side.
 --> this command prints current version  and file path for server side project folders.
 --> if server doesnt contain project name "projectname" than  it will print out this message "[C]: Projcet Does not Exist in Server!".
 
-•./WTF update  <Projectname>
---> This command request manifest file from server side for this project and then scan through both server side manifest and client side manifest and compare then  bot an print out messag  eaccoring to it . for ecample it prints out U for upload, M for Modify, A for added and D for deleated.
---> This command also create .Update file which conains same information as printed on command terminal, except this .Update file does not contain all the list related to U.
+â€¢./WTF update  <Projectname>
+--> This command request manifest file from server side for this project and then scan through both server side manifest and client 
+  side manifest and compare then  bot an print out messag  eaccoring to it . for ecample it prints out U for upload, M for Modify,
+  A for added and D for deleated.
+--> This command also create .Update file which conains same information as printed on command terminal, except this .Update file
+  does not contain all the list related to U.
 
-•./WTF upgrade <Projectname>
---> This command used .Update file created using update command and apply thoes changes listed in to Client side of the project. for example, it removes all files whicha re tagged with D, if file is tagged with A or M this command get that file from server side and add or modify that file to this project.
+â€¢./WTF upgrade <Projectname>
+--> This command used .Update file created using update command and apply thoes changes listed in to Client side of the project.
+   for example, it removes all files whicha re tagged with D, if file is tagged with A or M this command get that file from server 
+   side and add or modify that file to this project.
 
-•./WTF commit <Projectname>
+â€¢./WTF commit <Projectname>
 --> This command is very similar to update command, but this command is for server side, this command creat list for server side.
---> This function checks which file to be removed, added, Modify to server side and create commit file and send it to server, where server saves it as active commit.
+--> This function checks which file to be removed, added, Modify to server side and create commit file and send it to server, 
+   where server saves it as active commit.
 
-•./WTF push  <Projectname>
+â€¢./WTF push  <Projectname>
 --> This funcntion, send commit to server to make changes to server side of the project.
---> This functions saves all the old files, and compress them to one single text file and saves them to old version folder, for future use if required.
+--> This functions saves all the old files, and compress them to one single text file and saves them to old version folder, for
+   future use if required.
 --> This function then make all the changes listed in commit file to the project  and increment it's version number.
   
 
