@@ -1,4 +1,3 @@
-Test Cases:
 Server command:
 ./WTFServer <port>
 --> This command opens up a connection where all the client can  make connection and join and work on project.
