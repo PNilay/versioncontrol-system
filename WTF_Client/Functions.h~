@@ -31,7 +31,7 @@ typedef struct
 	char *Hashcode;
 }Update_File_Info;
 
-typedef struct
+typedef struct 
 {
 	char *commit;
 	char *name;
@@ -40,11 +40,6 @@ typedef struct
 }Commit_File_Info;
 
 //FUNCTION:
-void free_commit_file_info(Commit_File_Info* Array, int size);
-void free_file_info(File_Info* Array, int size);
-
-void Write_File_Protocol(int id, char* path);
-
 int isDirectory(const char *path);
 int StringCmp(const char *k, const char *ptr);
 int CreateSocket(uint32_t Port, const char *Ip);
@@ -54,7 +49,7 @@ int File_Exists(char *File_Name, char*path);// check if file exists in project f
 void CreateAndInitalize_Manifest(char* Proj_name);
 void Project_VersionIncrement(char * Proj_name);
 void ReCreate_files(char* data);
-int Add_File_To_Manifest(char* Proj_name, char* filename);
+void Add_File_To_Manifest(char* Proj_name, char* filename);
 File_Info *Get_ManifestFile_Info(char * path, int *size1,char* versionNum);
 void Remove_File_From_Manifest(char* Proj_name, char* filename);
 //filename_path: proj_name/filename, Hash is return value.
@@ -69,12 +64,11 @@ int Check_For_Update_File(char * Proj_name); // This function will return 1 if c
 void Generate_Client_Manifest_Commit(char *Proj_name);
 void Fix_Server_Manifest(char *File_path);
 Commit_File_Info *Get_Commit_File_Info(char * path, int *size1);
-int Finalize_Commit(File_Info *array1, int size1, File_Info *array2, int size2, char*Proj_Name, char*path);
+int Finalize_Commit( Commit_File_Info *array3, int size3, File_Info *array1, int size1, File_Info *array2, int size2, char*Proj_Name, char*path);
 int Update_File_For_Push(char *Proj_name);
 void Send_File_Protocol(char *path, int fd, char* Filename);
 void Send_File_Protocol_initalize(char *send, char *Project_name);
 void Send_Project_Protocol(char *Project_name, int fd);
-int Send_Project_Protocol2(char *Project_name, int fd, char* commit_path);
 void Number_Of_Files(char *dir_Path, int *num_of_Files);
 void Generate_Live_Client_Manifest(char* Proj_name);
 void Compare_Manifest_Files(File_Info *array1, int size1, char* versionnum1,File_Info *array2, int size2, char*versionnum2, char *Proj_Name, File_Info *array3);

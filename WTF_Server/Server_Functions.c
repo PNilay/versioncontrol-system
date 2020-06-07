@@ -1,5 +1,43 @@
 #include "Server_Functions.h"
 
+
+void Save_Old_Version(char* Proj_name)
+{
+  printf("[S]: Saving old version of project %s\n",Proj_name);
+  char *Old_Version_Directory = "./Server_Repository/Old_Version";
+  if (isDirectoryExists(Old_Version_Directory) != 1)
+  {
+      int c = mkdir(Old_Version_Directory, 0700);
+  }
+  //Now  check if project name folder exists in oldversion folder:
+  char Old_Version_Directory_Proj_name[strlen(Old_Version_Directory)+strlen(Proj_name)+5];
+  sprintf(Old_Version_Directory_Proj_name, "./Server_Repository/Old_Version/%s", Proj_name);
+
+  printf("Old_Version_Directory_Proj_name: %s\n", Old_Version_Directory_Proj_name);
+  if (isDirectoryExists(Old_Version_Directory_Proj_name) != 1)
+  {
+    int h = mkdir(Old_Version_Directory_Proj_name,0700);
+  }
+
+  //Get the Version number  of Current Manifest File:
+  File_Info *Array;
+  char versionNum[10];
+  int size1 =0;
+
+  char path_of_Manifest[strlen("./Server_Repository/")+2*strlen(Proj_name)+strlen(".Manifest")+5];
+  sprintf(path_of_Manifest, "./Server_Repository/%s/%s.Manifest",Proj_name,Proj_name);
+
+  Array = Get_ManifestFile_Info(path_of_Manifest, &size1,versionNum);
+
+  //Old_Version_path: ./Server_Repository/Old_version/Proj_name/version#.txt
+  char Old_Version_Path[strlen(Old_Version_Directory_Proj_name)+15+strlen(versionNum)];
+  sprintf(Old_Version_Path, "%s/Version%s.txt", Old_Version_Directory_Proj_name,versionNum);
+
+  // printf("Old_Version_Path %s\n", Old_Version_Path);
+  int file = open(Old_Version_Path, O_CREAT|O_RDWR, 00700);
+  Send_Project_Protocol(Proj_name, file);
+}
+
 int isDirectory(const char *path) {
    struct stat statbuf;
    if (stat(path, &statbuf) != 0)
@@ -9,134 +47,112 @@ int isDirectory(const char *path) {
 
 void Project_VersionIncrement(char * Proj_name)
 {
-	char *init = "./Server_Repository/";
 	char path[2*strlen(Proj_name)+35];
-    strcpy(path, init);
-	strcat(path,Proj_name);
-	strcat(path,"/");
-	strcat(path, Proj_name);
-	strcat(path,".Manifest"); 
-	
-int fd = open(path, O_RDWR, 00700);
-      
-struct stat st;
-int size =0;
-stat(path, &st);
-size = st.st_size;
-//printf("size: %i\n",size);
-int status = -1;
-char buffer[size];
- do
-  {
-    status = read(fd, buffer, size);
-  }while(status > 0);
-close(fd);  
+  sprintf(path, "./Server_Repository/%s/%s.Manifest",Proj_name, Proj_name);
+
+  int fd = open(path, O_RDWR, 00700);
+
+  struct stat st;
+  int size =0;
+  stat(path, &st);
+  size = st.st_size;
+  int status = -1;
+  char buffer[size];
+   do
+    {
+      status = read(fd, buffer, size);
+    }while(status > 0);
+  close(fd);
+  buffer[size] = '\0';
+
   if(buffer != NULL){
-	int len = strlen(buffer);
+	  int len = strlen(buffer);
     int c =0;
     int numberofToken =0;
     while(c<len)
-      {
-	if(buffer[c] =='\n')
-	  {
-	    buffer[c] = '\0';
-	    numberofToken++;
-	  }
-	c++;
-      }
+    {
+    	if(buffer[c] =='\n')
+    	  {
+    	    buffer[c] = '\0';
+    	    numberofToken++;
+    	  }
+    	c++;
+    }
 
 char **Tokens = (char**)malloc(numberofToken*sizeof(char*));
     int r=0;
     if(buffer[0] != '\0')
-      {
-	Tokens[0] = &buffer[0];
-	r++;
-      }
+    {
+    	Tokens[0] = &buffer[0];
+    	r++;
+    }
     else{
       numberofToken--;
     }
 
     int i =0;
     while(i<len)
-      {
-	if(buffer[i] == '\0' && buffer[i+1] != '\0' && r<=numberofToken)
-	  {
-	    Tokens[r] = &(buffer[i+1]);
-	    r++;
-	  }
-	if(buffer[i] == '\0' && buffer[i+1] == '\0')
-	  {
-	    numberofToken--;
-	  }
-	i++;
-      }
-     
+    {
+      if(buffer[i] == '\0' && buffer[i+1] != '\0' && r<=numberofToken)
+  	  {
+  	    Tokens[r] = &(buffer[i+1]);
+  	    r++;
+  	  }
+      if(buffer[i] == '\0' && buffer[i+1] == '\0')
+  	  {
+  	    numberofToken--;
+  	  }
+      i++;
+    }
+
 	  int num = atoi(Tokens[0]);
 	  num++;
 	  sprintf(Tokens[0] ,"%d",num);
 	  remove(path);
-	int fd = open(path, O_CREAT|O_RDWR, 00700);
-	const char *newline = "\n";
+
+    int fd = open(path, O_CREAT|O_RDWR, 00700);
+	  const char *newline = "\n";
 	  for(i =0; i<r; i++)
-      {
-		write(fd, Tokens[i], strlen(Tokens[i]));
-		write(fd, newline, 1);
+    {
+		    write(fd, Tokens[i], strlen(Tokens[i]));
+		    write(fd, newline, 1);
 	  }
   }
 }
 
 void CreateAndInitalize_Manifest(char* Proj_name)
 {
-		int check; 
-		char* inti = "./Server_Repository/";
 		int len = strlen(Proj_name);
 		char path[2*len+35];
+    sprintf(path, "./Server_Repository/%s", Proj_name);
 
-	    strcpy(path, inti);
-		strcat(path,Proj_name);
-			
-	check = mkdir(path, 0700); 
-		//printf("Directory created\n");
+    mkdir(path, 0700);
+
 		strcat(path,"/");
 		strcat(path, Proj_name);
-		strcat(path,".Manifest");  
-		//printf("path:::: %s\n",path);
-      int fd = open(path, O_CREAT|O_RDWR, 00700);
-      
-      int version =0;
-      char tmp[10];
-      sprintf(tmp,"%d", version);
-	  write(fd, tmp, strlen(tmp));
-      char *newline = "\n";
-      write(fd, newline, 1);
-      close(fd);
-     
-     
-     //Create History file for this Projcet:
-	 char *start = "./";
-     char *Hist = ".History";
-     char History[strlen(Proj_name)+ strlen(Hist)+5];
-     strcpy(History, start);
-     strcat(History, Proj_name);
-     strcat(History, Hist);
-	fd = open(History, O_CREAT|O_RDWR, 00700);
-	char * Add = "A";
-	const char* tab = "\t";
-	write(fd, Add, strlen(Add));
-	write(fd, tab,1);
-	
-	char ManName[2*strlen(Proj_name)+10];
-	strcpy(ManName, Proj_name);
-	strcat(ManName, "/");
-	strcat(ManName,Proj_name);
-	strcat(ManName, ".Manifest");
-	write(fd, ManName, strlen(ManName));
-	write(fd, tab,1);
-	char *Zero = "0";
-	write(fd,Zero, strlen(Zero));
-	write(fd,newline,1);
+		strcat(path,".Manifest");
+    int fd = open(path, O_CREAT|O_RDWR, 00700);
 
-     // printf("Initialized\n");
+    int version =0;
+    char tmp[10];
+    sprintf(tmp,"%d", version);
+    write(fd, tmp, strlen(tmp));
+    char *newline = "\n";
+    write(fd, newline, 1);
+    close(fd);
+
+
+     //Create History file for this Projcet:
+    char History[strlen(Proj_name)+ strlen("./Server_Repository/Project_History/.History")+2];
+    sprintf(History,"./Server_Repository/Project_History/%s.History",Proj_name );
+
+    if (isDirectoryExists("./Server_Repository/Project_History") != 1)
+    {
+        int c = mkdir("./Server_Repository/Project_History", 0700);
+    }
+
+	fd = open(History, O_CREAT|O_RDWR, 00700);
+  close(fd);
 }
 // STRING COMPARE:
 /*
@@ -217,34 +233,25 @@ int Project_Exists(char *Project_Name, char *path)
   }
 int m =0;
   while ((dp = readdir(dir)) != NULL)
-    {
-      if(strcmp(dp->d_name, ".")!= 0&& strcmp(dp->d_name,"..")!=0)
-	{
-	  strcpy(path1, path);
-	  strcat(path1,"/");
-	  strcat(path1, dp->d_name);
-	  if(StringCmp(dp->d_name, Project_Name)==0)
-	  {//printf("Project Exists!\n");
-		  return 1;}
-	}
-
-    }
+  {
+    if(strcmp(dp->d_name, ".")!= 0&& strcmp(dp->d_name,"..")!=0)
+	  {
+  	  strcpy(path1, path);
+  	  strcat(path1,"/");
+  	  strcat(path1, dp->d_name);
+  	  if(StringCmp(dp->d_name, Project_Name)==0)
+  	  {//Project exists
+  		  return 1;}
+	 }
+  }
   closedir(dir);
   return 0;
 }
-
 void Send_File_Protocol(char *path, int fd, char* FilenamePath) //Writes a file into sendfile.txt
 {
-	//printf("Send_file_protocol path: %s\n",path);
-	//printf("Send_file_protocol Filenamepath: %s\n",FilenamePath);
-
 	char Filename[strlen(FilenamePath)+25];
-	char *initial = "./Server_Repository/";
-	  strcpy(Filename, initial);
-	  strcat(Filename, FilenamePath);
-	 //printf("newfilename: %s\n",Filename);
-	
-	
+  sprintf(Filename,"./Server_Repository/%s", FilenamePath);
+
   char path1[1000] = "";
   struct dirent *dp;
   DIR *dir = opendir(path);
@@ -253,38 +260,36 @@ void Send_File_Protocol(char *path, int fd, char* FilenamePath) //Writes a file 
   {
     return;
   }
-  
+
 int m =0;
   while ((dp = readdir(dir)) != NULL)
-    {
-      if(strcmp(dp->d_name, ".")!= 0&& strcmp(dp->d_name,"..")!=0)
+  {
+    if(strcmp(dp->d_name, ".")!= 0&& strcmp(dp->d_name,"..")!=0)
 	{
 	  strcpy(path1, path);
 	  strcat(path1,"/");
 	  strcat(path1, dp->d_name);
 	  if(!isDirectory(path1))
-	  {	
-		  //printf("path1: %s == filename: %s\n",path1, Filename);
+	  {
 		 if(strcmp(path1,Filename)==0)
-		  {
-			  //printf("----------->\n");
-		int size;
-		struct stat st;
-		stat(path1, &st);
-		size = st.st_size;
-		
-		int fdT = open(path1, O_RDWR, 00700);
-		
-		int status = -1;
-		char buffer[size];
-		do
-		{
-			status = read(fdT, buffer, size);
-		}while(status > 0);
-		close(fdT);
-			char tmp[10];
-			const char *del = ":";
-			sprintf(tmp,"%d", strlen(FilenamePath));
+		 {
+  		int size;
+  		struct stat st;
+  		stat(path1, &st);
+  		size = st.st_size;
+
+  		int fdT = open(path1, O_RDWR, 00700);
+
+  		int status = -1;
+  		char buffer[size];
+  		do
+  		{
+  			status = read(fdT, buffer, size);
+  		}while(status > 0);
+  		close(fdT);
+  			char tmp[10];
+  			const char *del = ":";
+  			sprintf(tmp,"%d", strlen(FilenamePath));
 			  write(fd,tmp, strlen(tmp));
 			  write(fd,del,1);
 			  write(fd,FilenamePath, strlen(FilenamePath));
@@ -294,25 +299,22 @@ int m =0;
 			  write(fd,del,1);
 			  write(fd,buffer,size);
 			  write(fd,del,1);
-			    closedir(dir);
-			  return;
+  			closedir(dir);
+  			return;
 		  }
 	  }
-	}}
+	}
+}
   closedir(dir);
 }
 
 void Send_File_Protocol_initalize(char * send, char *Project_name)
 {
-	
+
 	char path[25+strlen(Project_name)];
-	char *initial = "./Server_Repository";
-	  strcpy(path, initial);
-	  strcat(path,"/");
-	  strcat(path, Project_name);
-	 //printf("newpath: %s\n",path);
+  sprintf(path,"./Server_Repository/%s",Project_name);
+
   int fd = open("./sendfile.txt", O_CREAT|O_RDWR, 00700);
-  //const char *path = ".";
   int length = strlen(send);
   int m =0;
   int numberoffiles =0;
@@ -323,15 +325,14 @@ void Send_File_Protocol_initalize(char * send, char *Project_name)
 		  numberoffiles = numberoffiles+1;
 	  }
 	  m = m+1;
-  } 
-  
-      char tmp[10];
-      sprintf(tmp,"%d", numberoffiles);
+  }
+
+    char tmp[10];
+    sprintf(tmp,"%d", numberoffiles);
 	  write(fd, tmp, strlen(tmp));
 	  const char *delim = ":";
 	  write(fd,delim,1);
-	  
-  //printf("Total Number of Files: %i\n", numberoffiles);
+
   char * pch;
   pch = strtok (send,":");
   while (pch != NULL)
@@ -346,27 +347,20 @@ void create(void* ptr,char *buffer, int len)
 {
 	connection_t2 *conn;
 	conn = (connection_t2 *)ptr;
-	//printf("Create Function called\n");
-	
+
 	//Send Conformation Message to client:
-	char* conformation = "OK";
 	char* Success = "Success";
 	char* failure = "Failure";
-	
-	//printf("[S]: Message from Client: %s\n", buffer);
+
 	//Send Conformation Message to client:
-	//write(conn->sock, conformation, strlen(conformation));	
 	bzero(buffer, sizeof(buffer));
-				
+
 	//Read Length of Project Name:
 	read(conn->sock, &len, sizeof(int));
 	char *Proj_name = (char *)malloc((len+1)*sizeof(char));
 	Proj_name[len] = 0;
 	read(conn->sock, Proj_name, len);
-				
-	//Print name of Project:
-	//printf("Project name :%s\n", Proj_name);
-	
+
 	//Check if project already exists or not
 	//If Project Does exist then send failuer message to Client.
 	int temp =0;
@@ -377,29 +371,21 @@ void create(void* ptr,char *buffer, int len)
 	write(conn->sock, failure, strlen(failure));
 	}
 	//If Project Exists send Sucess Message & then send Manifest file to Client.
-	
+
 	else{//printf("Project does not Exists\n");
 	CreateAndInitalize_Manifest(Proj_name);
 	write(conn->sock, Success, strlen(Success));
 	char path[2*strlen(Proj_name)+10];
-	char *slash = "/";
-	char *Manifest = ".Manifest:";
-	int r =0;
-	char newproj_name[strlen(Proj_name)+1];
-	
-	
-	strcpy(path, Proj_name);
-	strcat(path,slash);
-	strcat(path,Proj_name);
-	strcat(path,Manifest);
-	//printf("PAth of maifest file: %s\n",path);
+
+  sprintf(path, "%s/%s.Manifest:",Proj_name, Proj_name);
+
 	Send_File_Protocol_initalize(path,Proj_name);
 	int fdT = open("./sendfile.txt", O_RDWR, 00700);
 	int size;
 	struct stat st;
 	stat("./sendfile.txt", &st);
 	size = st.st_size;
-				
+
 	int status = -1;
 	char buffer[size];
 	do
@@ -407,34 +393,28 @@ void create(void* ptr,char *buffer, int len)
 		status = read(fdT, buffer, size);
 		}while(status > 0);
 		close(fdT);
-		//printf("BUFFER: %s\n",buffer);
 	write(conn->sock, &size, sizeof(int));
 	write(conn->sock, buffer,size);
 	remove("./sendfile.txt");
-	//printf("Create DONE!\n" );
-				
+
 }
 	free(Proj_name);
 }
 
 void Send_Project_Protocol(char *Project_name, int fd)
 {
-	
+
 	char path[strlen(Project_name)+25];
-	char *initial = "./Server_Repository/";
-	strcpy(path, initial);
-	strcat(path, Project_name);
-	//printf("path: %s\n",path);
+  sprintf(path, "./Server_Repository/%s", Project_name);
 	//Number of files inside folder:
 	int num_of_Files =0;
 	Number_Of_Files(path, &num_of_Files);
-	//printf("Number of files:  ---------->%i\n",num_of_Files);
 	char tmp[10];
 	const char *del = ":";
 	sprintf(tmp,"%d",num_of_Files);
 	write(fd,tmp, strlen(tmp));
 	write(fd,del,1);
-	
+
   char path1[1000] = "";
   struct dirent *dp;
   DIR *dir = opendir(path);
@@ -443,9 +423,7 @@ void Send_Project_Protocol(char *Project_name, int fd)
   {
     return;
   }
-  
-  
-int m =0;
+
   while ((dp = readdir(dir)) != NULL)
     {
       if(strcmp(dp->d_name, ".")!= 0&& strcmp(dp->d_name,"..")!=0)
@@ -453,20 +431,19 @@ int m =0;
 	  strcpy(path1, path);
 	  strcat(path1,"/");
 	  strcat(path1, dp->d_name);
-	  
+
 	  if(!isDirectory(path1))
 	  {
 		char FilenamePath[strlen(Project_name)+strlen(dp->d_name)+10];
-		strcpy(FilenamePath,Project_name);
-		strcat(FilenamePath, "/");
-		strcat(FilenamePath,dp->d_name);   	
+    sprintf(FilenamePath, "%s/%s",Project_name,dp->d_name);
+
 		int size;
 		struct stat st;
 		stat(path1, &st);
 		size = st.st_size;
-		
+
 		int fdT = open(path1, O_RDWR, 00700);
-		
+
 		int status = -1;
 		char buffer[size];
 		do
@@ -474,23 +451,21 @@ int m =0;
 			status = read(fdT, buffer, size);
 		}while(status > 0);
 		close(fdT);
-		
-		//char tmp[10];
-		//const char *del = ":";
+
 		sprintf(tmp,"%d", strlen(FilenamePath));
 		write(fd,tmp, strlen(tmp));
-			  write(fd,del,1);
-			  write(fd,FilenamePath, strlen(FilenamePath));
-			  write(fd,del,1);
-			  sprintf(tmp,"%d", size);
-			  write(fd, tmp, strlen(tmp));
-			  write(fd,del,1);
-			  write(fd,buffer,size);
-			  write(fd,del,1);
+	  write(fd,del,1);
+	  write(fd,FilenamePath, strlen(FilenamePath));
+	  write(fd,del,1);
+	  sprintf(tmp,"%d", size);
+	  write(fd, tmp, strlen(tmp));
+	  write(fd,del,1);
+	  write(fd,buffer,size);
+	  write(fd,del,1);
 	  }
 	}}
   closedir(dir);
-	
+
 }
 
 void Number_Of_Files(char *path, int *num_of_Files1)
@@ -504,7 +479,7 @@ void Number_Of_Files(char *path, int *num_of_Files1)
   {
     return;
   }
-  
+
 
   while ((dp = readdir(dir)) != NULL)
     {
@@ -514,54 +489,44 @@ void Number_Of_Files(char *path, int *num_of_Files1)
 	  strcat(path1,"/");
 	  strcat(path1, dp->d_name);
 	  if(!isDirectory(path1))
-	  {	
+	  {
 		num_of_Files = num_of_Files+1;
 	  }
 	}}
 	*num_of_Files1 = num_of_Files;
-		//printf("Number of Files %i\n", *num_of_Files1);
   closedir(dir);
 }
 
 void Add_Commit_File_To_Project(char* Proj_name, char* Data, int Data_length)
 {
-		  char * pre = "./Server_Repository/";
-		  char *slash = "/";
-		  char path[strlen(pre)+sizeof(Proj_name)]; //"./clinetrepo/projname
-		  strcpy(path, pre);
-		  strcat(path, Proj_name);
-		  
+
+		  char path[strlen("./Server_Repository/")+sizeof(Proj_name)]; //"./clinetrepo/projname
+      sprintf(path, "./Server_Repository/%s", Proj_name);
+
 		  char File_Name[strlen(Proj_name)+20];
-		  char* commit = ".Commit";
-		  strcpy(File_Name, Proj_name);
-		  strcat(File_Name,commit);
-		
+      sprintf(File_Name, "%s.Commit",Proj_name );
+
 		  char new_File_Name[strlen(Proj_name)+20];
-		  int No =0; 
+		  int No =0;
 		  while(1)
-		  {		
+		  {
 			  	char str[10];
 				sprintf(str, "%d", No);
 				strcpy(new_File_Name, File_Name);
 				strcat(new_File_Name,str);
-				
+
 				if(File_Exists(new_File_Name, path) != 1)
 				{
 					break;
 				}
-				No= No+1;				
+				No= No+1;
 		  }
 		  char commit_path[strlen(path)+ strlen(new_File_Name)+2];
-		  strcpy(commit_path, path);
-		  strcat(commit_path, slash);
-		  strcat(commit_path, new_File_Name);
-		  
+      sprintf(commit_path, "%s/%s",path,new_File_Name);
+
 		  int fdT = open(commit_path, O_CREAT|O_RDWR, 00700);
 		  write(fdT,Data,Data_length);
 		  close(fdT);
-		  //printf("done commit!\n");
-		  
-		  
 }
 
 int File_Exists(char *File_Name, char*path)
@@ -572,15 +537,14 @@ int File_Exists(char *File_Name, char*path)
 
   if (!dir)
   {
-    return;
+    return 0;
   }
-int m =0;
   while ((dp = readdir(dir)) != NULL)
     {
       if(strcmp(dp->d_name, ".")!= 0&& strcmp(dp->d_name,"..")!=0)
 	{
 	  if(!isDirectory(path1))
-	  {		
+	  {
 		 if(strcmp(dp->d_name,File_Name)==0)
 		  {
 			return 1;
@@ -595,108 +559,84 @@ int m =0;
 
 int Compare_Commit_Remove(char *Client_Commit_Data, char* Proj_name)
 {
-	//printf("Compare_Commit_Remove ____________________________________________________\n");
-		  char * pre = "./Server_Repository/";
-		  char *slash = "/";
-		  char path[strlen(pre)+sizeof(Proj_name)]; //"./clinetrepo/projname
-		  strcpy(path, pre);
-		  strcat(path, Proj_name);
-		  
-		  char File_Name[strlen(Proj_name)+20];
-		  char* commit = ".Commit";
-		  strcpy(File_Name, Proj_name);
-		  strcat(File_Name,commit);
-		
+		  char path[strlen("./Server_Repository/")+sizeof(Proj_name)]; //"./serverrepo/projname
+      sprintf(path, "./Server_Repository/%s", Proj_name);
+
+		  char File_Name[strlen(Proj_name)+20];//proj_name.commit
+      sprintf(File_Name, "%s.Commit", Proj_name);
+
 		  char new_File_Name[strlen(Proj_name)+20];
 		  int No =0;
-		  int matched = -1; 
+		  int matched = -1;
 		  while(1)
-		  {		
-			  	char str[10];
-				sprintf(str, "%d", No);
-				strcpy(new_File_Name, File_Name);
-				strcat(new_File_Name,str);
-				
+		  {
+        sprintf(new_File_Name, "%s%d", File_Name, No);
+
 				if(File_Exists(new_File_Name, path) != 1)
 				{
+          //If file doen't exists break out of the while loop
 					break;
 				}
-				
-	//IF commif file verison exists, then compare this commit file with Client_send commit data.				
+
+	    //IF commif file verison exists, then compare this commit file with Client_send commit data.
 		  char commit_path[strlen(path)+ strlen(new_File_Name)+2];
-		  strcpy(commit_path, path);
-		  strcat(commit_path, slash);
-		  strcat(commit_path, new_File_Name);
-		  
+      sprintf(commit_path, "%s/%s",path,new_File_Name);
+
 		  int fdT = open(commit_path, O_RDWR, 00700);
 		  int size;
 		  struct stat st;
 		  stat(commit_path, &st);
 		  size = st.st_size;
-		  //printf("SIZE:::::::::: %i\n", size);
 		  char Data[size];
 		  read(fdT,Data,size);
 		  close(fdT);
-		  
-		//  printf("DATA%i: %s\n",No, Data);
-		 // printf(" strlen(Data) == strlen(Client_Commit_Data)  ::: %i == %i\n",size ,strlen(Client_Commit_Data));
-		  //printf("Data: \n%s\n---------------------------", Data);
-		  //printf("Client_Commit_Data: \n%s\n----------------",Client_Commit_Data);
+      Data[size] = '\0';
+
 
 		  if(size == strlen(Client_Commit_Data))
 		  {
-			  //printf("Stringcmp(Client_Commit_Data, Data) ==== %i\n",StringCmp_For_Commit(Data,Client_Commit_Data, size) );
 			  if(StringCmp_For_Commit(Data,Client_Commit_Data,size) ==0)
 			  {
 				  matched = No;
-				  //printf("Commit version %i is matched with Client's Data.\n",No);
+				  // printf("[S]: Commit version %i is matched with Client's Data.\n",No);
 				  break;
 			  }
 		  }
 		  No= No+1;
 		  }
-		  
+
+      //Remove all commit files from server's project:
+      int newNo =0;
+      while(1)
+      {
+
+        sprintf(new_File_Name, "%s%d",File_Name, newNo );
+
+      if(File_Exists(new_File_Name, path) != 1)
+        {
+          break;
+        }
+
+        char remove_Path[strlen(path)+2+strlen(new_File_Name)];
+        sprintf(remove_Path,"%s/%s", path,new_File_Name );
+
+        remove(remove_Path);
+        newNo= newNo+1;
+      }
+
 		  if(matched != -1)
 		  {
-			  //printf("Matched != -1\n");
 			  //There is match:
-			  //Remove all other Commit files and add client commit file as version0
-			int newNo =0;
-			  while(1)
-		  {		
-			  	char str1[10];
-				sprintf(str1, "%d", newNo);
-				strcpy(new_File_Name, File_Name);
-				strcat(new_File_Name,str1);
-				
-				if(File_Exists(new_File_Name, path) != 1)
-				{
-					break;
-				}
-				
-				
-				//printf("remove(%s)\n",new_File_Name);
-				char remove_Path[strlen(path)+2+strlen(new_File_Name)];
-				strcpy(remove_Path, path);
-				strcat(remove_Path, slash);
-				strcat(remove_Path, new_File_Name);
-				//printf("remove(%s)\n",remove_Path);
-				remove(remove_Path);
-				newNo= newNo+1;				
-		  }
-  
-		//add client commit as version0				
-		Add_Commit_File_To_Project(Proj_name, Client_Commit_Data, strlen(Client_Commit_Data));
-		return 1;
-		
+			  //add client commit file as version0
+		    Add_Commit_File_To_Project(Proj_name, Client_Commit_Data, strlen(Client_Commit_Data)); //<-------------------------------------
+        return 1;
 		  }
 		  return 0;
-		  //printf("done commit!\n");
 }
 
 /*
  * Function to check whether a directory exists or not.
- * It returns 1 if given path is directory and  exists 
+ * It returns 1 if given path is directory and  exists
  * otherwise returns 0.
  */
 int isDirectoryExists(char *path)
@@ -714,121 +654,117 @@ int isDirectoryExists(char *path)
 
 File_Info *Get_ManifestFile_Info(char * path, int *size1,char* versionNum)
 {
-	int fd = open(path, O_RDWR, 00700);
-    
-    // get the size of path, so we can store file into char array.
-	struct stat st;
-	int size =0;
-	stat(path, &st);
-	size = st.st_size;
-	//Read file and store it into char buffer array.
-	int status = -1;
-	char buffer[size];
+  int fd = open(path, O_RDWR, 00700);
 
-	do
-	{
+  // get the size of path, so we can store file into char array.
+  struct stat st;
+  int size =0;
+  stat(path, &st);
+  size = st.st_size;
+  int status = -1;
+  char buffer[size];
+  do
+  {
     status = read(fd, buffer, size);
-	}while(status > 0);
-	close(fd);  
+  }while(status > 0);
+  close(fd);
+  buffer[size] = '\0';
 
   if(buffer != NULL){
-	int len = strlen(buffer);
+    int len = strlen(buffer);
     int c =0;
     int numberofToken =0;
     while(c<len)
+    {
+      if(buffer[c] =='\n')
       {
-	if(buffer[c] =='\n')
-	  {
-	    buffer[c] = '\0';
-	    numberofToken++;
-	  }
-	c++;
+        buffer[c] = '\0';
+        numberofToken++;
       }
+      c++;
+    }
 
-	char **Tokens = (char**)malloc(numberofToken*sizeof(char*));
+    char **Tokens = (char**)malloc(numberofToken*sizeof(char*));
     int r=0;
     if(buffer[0] != '\0')
-      {
-	Tokens[0] = &buffer[0];
-	r++;
-      }
+    {
+      Tokens[0] = &buffer[0];
+      r++;
+    }
     else{
       numberofToken--;
     }
 
     int i =0;
     while(i<len)
+    {
+      if(buffer[i] == '\0' && buffer[i+1] != '\0' && r<=numberofToken)
       {
-	if(buffer[i] == '\0' && buffer[i+1] != '\0' && r<=numberofToken)
-	  {
-	    Tokens[r] = &(buffer[i+1]);
-	    r++;
-	  }
-	if(buffer[i] == '\0' && buffer[i+1] == '\0')
-	  {
-	    numberofToken--;
-	  }
-	i++;
+        Tokens[r] = &(buffer[i+1]);
+        r++;
       }
-  strcpy(versionNum,Tokens[0]);
-  
-  *size1 = (r-1);
-
-  File_Info *array;
-  array = malloc((r-1)*sizeof(File_Info));
-  for(i=1;i<r;i++){
-  char val[strlen(Tokens[i])];
-  	char *init = "";
-    strcpy(val, init);
-  	strcat(val,Tokens[i]);
-
-  c =0;
-  int u =0;
-  int length = strlen(val);
-  for(c =0; c<length; c++)
+      if(buffer[i] == '\0' && buffer[i+1] == '\0')
       {
-		if(val[c]== '\t')
-		{
-			val[c] = '\0';
-			u++;
-		}
+        numberofToken--;
       }
-      
+      i++;
+    }
+    strcpy(versionNum,Tokens[0]);
+
+    *size1 = (r-1);
+    File_Info *array;
+    array = malloc((r-1)*sizeof(File_Info));
+    for(i=1;i<r;i++){
+      char val[strlen(Tokens[i])];
+      char *init = "";
+      strcpy(val, init);
+      strcat(val,Tokens[i]);
+
+      c =0;
+      int u =0;
+      int length = strlen(val);
+      for(c =0; c<length; c++)
+      {
+        if(val[c]== '\t')
+        {
+          val[c] = '\0';
+          u++;
+        }
+      }
+
       (array+(i-1))->name = strdup(&(val[0]));
-      //printf("__________________%s\n",(array+(i-1))->name);
       int j =0;
       while(val[j] != '\0')
       {
-		  j++;
-	  }
-	  	  
+        j++;
+      }
+
       (array+(i-1))->Version = strdup(&val[j+1]);
-      j = j+1;     
+
+      j = j+1;
       while(val[j] != '\0')
       {
-		  j++;
-	  }
+        j++;
+      }
       (array+(i-1))->Hashcode = strdup(&val[j+1]);
-}
-  return array;
-  }	
+    }
+
+    return array;
+  }
 }
 
 void Remove_Files_From_Proj(char* Proj_Name)
 {
-  char * in = "./Server_Repository/";
-  char path[strlen(in)+strlen(Proj_Name)+2];
-  strcpy(path, in);
-  strcat(path, Proj_Name);
+  char path[strlen("./Server_Repository/")+strlen(Proj_Name)+2];
+  sprintf(path, "./Server_Repository/%s",Proj_Name);
   char path1[1000] = "";
   struct dirent *dp;
   DIR *dir = opendir(path);
 
   if (!dir)
   {
-    return 0;
+    return;
   }
-int m =0;
   while ((dp = readdir(dir)) != NULL)
     {
       if(strcmp(dp->d_name, ".")!= 0&& strcmp(dp->d_name,"..")!=0)
@@ -841,7 +777,463 @@ int m =0;
 
     }
   closedir(dir);
-  return 0;
+  return;
+}
+
+
+//This function add file to manifest of that projoect
+int Add_File_To_Manifest(char* Proj_name, char* filename)
+{
+  printf("Add File to manifest: %s\n", filename);
+  const char *tab = "\t";
+  const char *Version = "0";
+  const char *newline = "\n";
+  //Check if file exists inside Project Folder:
+
+  char *inital = "./Server_Repository/";
+  char *delim = "/";
+  char *Manifest = ".Manifest";
+  char *u ="";
+  char path[40+2*strlen(Proj_name)];
+  sprintf(path, "./Server_Repository/%s", Proj_name);
+  char Proj_filename[strlen(filename)+strlen(Proj_name)+2];
+  sprintf(Proj_filename, "%s/%s", Proj_name, filename);
+
+
+  int check;
+  //check if manifest file exists in project folder:
+  char manifestfilename[10+strlen(Proj_name)];
+  sprintf(manifestfilename, "%s.Manifest", Proj_name);
+  check = File_Exists(manifestfilename, path);
+  if(check ==1)
+  {
+    check = 0;
+    check = File_Exists(filename,path);
+
+    if(check != 1){
+      printf("File name does not exists in directory!\n");
+      return -1;
+    }
+
+    strcat(path,delim);
+    strcat(path,Proj_name);
+    strcat(path,Manifest);
+
+    File_Info *Array;
+    int size_of_array =0;
+    char versionNum[10];
+    Array = Get_ManifestFile_Info(path, &size_of_array, versionNum);
+
+    int i =0;
+    int changed = 0;
+    while(1 && i<size_of_array)
+    {
+      if(StringCmp((Array+i)->name,Proj_filename) == 0)
+      {
+        printf("[C]: warning: file already exists in manifest\n");
+        //If file is already in Manifest then just change the hashcode of the file:
+        // And Increase the Version number
+        char Hash[40];
+        Create_Hash(Proj_filename, Hash);
+
+        if(StringCmp((Array+i)->Hashcode,Hash ) != 0)
+        {
+          (Array+i)->Hashcode =Hash;
+          int num = atoi((Array+i)->Version);
+          num++;
+          sprintf((Array+i)->Version ,"%d",num);
+          changed = 1;
+          break;
+        }
+        else
+        {
+          printf("[S]: manifest is already upto date\n");
+          return -1;
+        }
+      }
+      i =i+1;
+    }
+    if(changed == 1)
+    {
+      remove(path);
+      int fd = open(path,O_CREAT|O_RDWR, 00700);
+      write(fd, versionNum, strlen(versionNum));
+      write(fd,newline,1);
+      for(i =0; i<size_of_array; i++)
+      {
+        write(fd,(Array+i)->name,strlen((Array+i)->name));
+        write(fd,tab,1);
+        write(fd,(Array+i)->Version,strlen((Array+i)->Version));
+        write(fd,tab,1);
+        write(fd,(Array+i)->Hashcode, strlen((Array+i)->Hashcode));
+        write(fd,newline,1);
+      }
+      close(fd);
+
+    }
+    if(changed == 0)
+    {
+      char newmanifestfilename[25+10+2*strlen(Proj_name)];
+      strcpy(newmanifestfilename,inital);
+      strcat(newmanifestfilename, Proj_name);
+      u = "/";
+      strcat(newmanifestfilename,u);
+      strcat(newmanifestfilename, manifestfilename);
+      int fd = open(newmanifestfilename,O_APPEND|O_RDWR, 00700);
+      write(fd, Proj_filename, strlen(Proj_filename));
+
+      write(fd,tab,1);
+      write(fd,Version,1);
+      write(fd,tab,1);
+      char Hash[40];
+      Create_Hash(Proj_filename, Hash);
+
+      write(fd,Hash, strlen(Hash));
+      write(fd,newline,1);
+      close(fd);
+    }
+
+  }
+  else
+  {
+    printf("[S]: Manifest file does not exists in Project\n");
+    return -1;
+  }
+}
+
+
+//This function removes file from manifest
+void Remove_File_From_Manifest(char* Proj_name, char* filename)
+{
+  const char *tab = "\t";
+  const char *newline = "\n";
+  char *inital = "./Server_Repository/";
+  char *delim = "/";
+  char *Manifest = ".Manifest";
+  char *u ="";
+  char path[40+2*strlen(Proj_name)];
+  char Proj_filename[strlen(filename)+strlen(Proj_name)+2];
+  strcpy(Proj_filename, u);
+  strcat(Proj_filename,Proj_name);
+  u = "/";
+  strcat(Proj_filename, u);
+  strcat(Proj_filename, filename);
+  u = "";
+  strcpy(path, inital);
+  strcat(path,Proj_name);
+  int check;
+
+  //check if manifest file exists in project folder:
+  char manifestfilename[10+strlen(Proj_name)];
+  strcpy(manifestfilename, u);
+  strcat(manifestfilename, Proj_name);
+  u =".Manifest";
+  strcat(manifestfilename, u);
+  check = File_Exists(manifestfilename, path);
+  if(check ==1)
+  {
+    strcat(path,delim);
+    strcat(path,Proj_name);
+    strcat(path,Manifest);
+
+    File_Info *Array;
+    int size_of_array =0;
+    char versionNum[10];
+    Array = Get_ManifestFile_Info(path, &size_of_array, versionNum);
+    int i =0;
+    int changed = -1;
+    while(1 && i<size_of_array)
+    {
+      if(StringCmp((Array+i)->name,Proj_filename) == 0)
+      {
+        //printf("file exists in manifest\n");
+        changed = i;
+        break;
+      }
+      i =i+1;
+    }
+    if(changed != -1)
+    {
+      remove(path);
+      int fd = open(path,O_CREAT|O_RDWR, 00700);
+      write(fd, versionNum, strlen(versionNum));
+      write(fd,newline,1);
+      for(i =0; i<size_of_array; i++)
+      {
+        if(i != changed)
+        {
+          write(fd,(Array+i)->name,strlen((Array+i)->name));
+          write(fd,tab,1);
+          write(fd,(Array+i)->Version,strlen((Array+i)->Version));
+          write(fd,tab,1);
+          write(fd,(Array+i)->Hashcode, strlen((Array+i)->Hashcode));
+          write(fd,newline,1);
+        }
+      }
+
+      if(size_of_array <= 2)
+      {
+        Fix_Manifest(Proj_name);
+      }
+      close(fd);
+
+    }
+    if(changed == -1)
+    {
+      printf("[S]: file can not be removed because it's not in the manifest\n");
+    }
+  }
+  else
+  {
+    printf("[S]: Manifest file does not exists in Project\n");
+  }
+}
+
+
+
+void Update_Manifest_Push(char* Proj_name)
+{
+  printf("Update Manifest push: %s\n", Proj_name);
+  const char *tab = "\t";
+  const char *newline = "\n";
+
+  char Commit_file[strlen(Proj_name)+strlen("./Server_Repository//.Commit0")+strlen(Proj_name)];
+  sprintf(Commit_file, "./Server_Repository/%s/%s.Commit0",Proj_name,Proj_name);
+  int size_c =0;
+  Commit_File_Info *Array_commit = Get_Commit_File_Info(Commit_file, &size_c);
+
+  int i =0;
+  for(i =0; i< size_c; i++)
+  {
+    if(strcmp((Array_commit+i)->commit,"1")==0 && strlen((Array_commit+i)->Hashcode) == 40)
+    {
+      printf("add:: %s\n",(Array_commit+i)->name);
+      //Add:
+      char *filename = &((Array_commit+i)->name[strlen(Proj_name)+1]);
+      Add_File_To_Manifest(Proj_name, filename);
+    }
+    else if(strcmp((Array_commit+i)->commit,"2")==0 && strlen((Array_commit+i)->Hashcode) == 40)
+    {
+      //Modify:
+      char *filename = &((Array_commit+i)->name[strlen(Proj_name)+1]);
+      Add_File_To_Manifest(Proj_name, filename);
+    }
+    else if(strcmp((Array_commit+i)->commit,"0")==0 && strlen((Array_commit+i)->Hashcode) == 40)
+    {
+      //Remove:
+      char *filename = &((Array_commit+i)->name[strlen(Proj_name)+1]);
+      Remove_File_From_Manifest(Proj_name,filename);
+    }
+  }
+  remove(Commit_file);
+}
+
+
+void Remove_Old_files_Commit(char* Proj_name)
+{
+  char Hist_Path[strlen(Proj_name)+ strlen("./Server_Repository/Project_History/.History")+2];
+  sprintf(Hist_Path, "./Server_Repository/Project_History/%s.History",Proj_name);
+  int hist = open(Hist_Path, O_RDWR, 00700);
+  struct stat st_hist;
+  int size_hist =0;
+  stat(Hist_Path, &st_hist);
+  size_hist = st_hist.st_size;
+  //Read file and store it into char buffer array.
+  int status_hist = -1;
+  char buffer_hist[size_hist];
+  do
+  {
+    status_hist = read(hist, buffer_hist, size_hist);
+  }while(status_hist > 0);
+  buffer_hist[size_hist] = '\0';
+  //Write contents back to History:
+
+
+  const char *tab = "\t";
+  const char *newline = "\n";
+
+  // printf("Remove old files from commit %s\n",Proj_name );
+  char Commit_file[strlen(Proj_name)+strlen("./Server_Repository//.Commit0")+strlen(Proj_name)];
+  sprintf(Commit_file, "./Server_Repository/%s/%s.Commit0",Proj_name,Proj_name);
+  int size =0;
+  // printf("Remove old files from commit1 %s\n",Proj_name );
+
+  Commit_File_Info *Array = Get_Commit_File_Info(Commit_file, &size);
+  // printf("Remove old files from commit2 %s\n",Proj_name );
+
+  int i =0;
+  for(i=0; i<size; i++)
+  {
+    if(strcmp((Array+i)->commit,"0")==0 && strlen((Array+i)->Hashcode) == 40)
+    {
+      //Remove this file from project:
+      // printf("Remove File: %s, %d\n",(Array+i)->name , strlen((Array+i)->name));
+      char Remove_file[strlen("./Server_Repository/")+strlen((Array+i)->name)];
+      sprintf(Remove_file, "./Server_Repository/%s",(Array+i)->name);
+      // printf("Remove File: %s\n",Remove_file );
+      remove(Remove_file);
+
+      //Add remove to history file:
+      write(hist,"D",strlen("D"));
+      write(hist,tab,1);
+      write(hist,(Array+i)->name, strlen((Array+i)->name));
+      write(hist, tab,1);
+      write(hist,(Array+i)->Version,strlen((Array+i)->Version));
+      write(hist,tab,1);
+      write(hist,(Array+i)->Hashcode, strlen((Array+i)->Hashcode));
+      write(hist,newline,1);
+      // printf("Removed\n" );
+    }
+    else if(strcmp((Array+i)->commit,"1")==0 && strlen((Array+i)->Hashcode) == 40)
+    {
+      //Add Add to history file:
+      write(hist,"A",strlen("A"));
+      write(hist,tab,1);
+      write(hist,(Array+i)->name, strlen((Array+i)->name));
+      write(hist, tab,1);
+      write(hist,(Array+i)->Version,strlen((Array+i)->Version));
+      write(hist,tab,1);
+      write(hist,(Array+i)->Hashcode, strlen((Array+i)->Hashcode));
+      write(hist,newline,1);
+    }
+    else if(strcmp((Array+i)->commit,"2")==0 && strlen((Array+i)->Hashcode) == 40)
+    {
+      //Add Modify to history file:
+      write(hist,"M",strlen("M"));
+      write(hist,tab,1);
+      write(hist,(Array+i)->name, strlen((Array+i)->name));
+      write(hist, tab,1);
+      write(hist,(Array+i)->Version,strlen((Array+i)->Version));
+      write(hist,tab,1);
+      write(hist,(Array+i)->Hashcode, strlen((Array+i)->Hashcode));
+      write(hist,newline,1);
+    }
+  }
+  // printf("Remove Manifest:%s\n" );
+
+  //Remove Manifest file also:
+  //char Manifest_file[strlen(Proj_name)+strlen("./Server_Repository//.Manifest")+strlen(Proj_name)];
+  //sprintf(Manifest_file, "./Server_Repository/%s/%s.Manifest", Proj_name, Proj_name);
+  //remove(Manifest_file);
+
+  //Remove commit file as well:
+  // remove(Commit_file);
+  // printf("Done\n" );
+}
+
+Commit_File_Info *Get_Commit_File_Info(char * path, int *size1)
+{
+  int fd = open(path, O_RDWR, 00700);
+  // get the size of path, so we can store file into char array.
+  struct stat st;
+  int size =0;
+  stat(path, &st);
+  size = st.st_size;
+  //Read file and store it into char buffer array.
+  int status = -1;
+  char buffer[size];
+  do
+  {
+    status = read(fd, buffer, size);
+  }while(status > 0);
+  close(fd);
+
+  if(buffer != NULL){
+    int len = strlen(buffer);
+    int c =0;
+    int numberofToken =0;
+    while(c<len)
+    {
+      if(buffer[c] =='\n')
+      {
+        buffer[c] = '\0';
+        numberofToken++;
+      }
+      c++;
+    }
+
+    char **Tokens = (char**)malloc(numberofToken*sizeof(char*));
+    int r=0;
+    if(buffer[0] != '\0')
+    {
+      Tokens[0] = &buffer[0];
+      r++;
+    }
+    else{
+      numberofToken--;
+    }
+
+    int i =0;
+    while(i<len)
+    {
+      if(buffer[i] == '\0' && buffer[i+1] != '\0' && r<=numberofToken)
+      {
+        Tokens[r] = &(buffer[i+1]);
+        r++;
+      }
+      if(buffer[i] == '\0' && buffer[i+1] == '\0')
+      {
+        numberofToken--;
+      }
+      i++;
+    }
+
+    *size1 = r;
+
+    //All the lines of file are now stored in Tokens array of array
+    //Now create struct array of size r-1 to store all the individual data.
+    Commit_File_Info *array;
+    array = malloc(r*sizeof(Commit_File_Info));
+    for(i=0;i<r;i++){
+      char val[strlen(Tokens[i])];
+      char *init = "";
+      strcpy(val, init);
+      strcat(val,Tokens[i]);
+
+      c =0;
+      int u =0;
+
+      int length = strlen(val);
+      for(c =0; c<length; c++)
+      {
+        if(val[c]== '\t')
+        {
+          val[c] = '\0';
+          u++;
+        }
+      }
+
+      //update:
+      (array+i)->commit = strdup(&(val[0]));
+
+      //name
+      int j =0;
+      while(val[j] != '\0')
+      {
+        j++;
+      }
+      (array+i)->name = strdup(&(val[j+1]));
+
+      //version
+      j = j+1;
+      while(val[j] != '\0')
+      {
+        j++;
+      }
+      (array+i)->Version = strdup(&val[j+1]);
+
+      //hashcode
+      j = j+1;
+      while(val[j] != '\0')
+      {
+        j++;
+      }
+      (array+i)->Hashcode = strdup(&val[j+1]);
+    }
+    //printf("DONE!!!!\n");
+    return array;
+  }
+  return NULL;
 }
 
 //buffer: data (numoffiles:lengthoffile1:file1name:lenthoffile1data:file1data:......)
@@ -849,24 +1241,15 @@ void ReCreate_files(char* buffer)
 {
 	//printf("Recreate FIles\n");
 	char *inital = "./Server_Repository/";
-	//int sizeofinital = strlen(inital);
 	int m =0;
   	int s =0;
-  	//char *re;
-  	const char *tk = ":";
-  	int start;
   	int last = strlen(buffer);
-  	//printf("[S->C]: Data length: %i\n",last);
-  	 char delm[] =":";
-  	 int len = last;
-      
-      char filenamesize[10];
-      char datasize[10];
-      int num;
-      int r =0;
 
-char numberOfFiles[10];
-  	//printf("[S->C]: numberOfFiles: %s\n",numberOfFiles);
+    char filenamesize[10];
+    int num;
+    int r =0;
+
+    char numberOfFiles[10];
 		while((s<last)&&(buffer[s]!= ':'))
 		{
 			numberOfFiles[r] = buffer[s];
@@ -874,17 +1257,14 @@ char numberOfFiles[10];
 			s = s+1;
 		}
 		numberOfFiles[r] = buffer[s];
-		
+
 		num = (int)strtol(numberOfFiles, (char**)NULL,10); //File name size;
-		//printf("number of files: %i\n",num);
-  	
-	s = s+1;
-      
+
+	  s = s+1;
+
   for(m =0; m<num; m++)
   	{
 		r=0;
-		//printf("FOR \n");
-		//printf("s = %i\n", s);
 		while((s<last)&&(buffer[s]!= ':'))
 		{
 			filenamesize[r] = buffer[s];
@@ -892,11 +1272,10 @@ char numberOfFiles[10];
 			s = s+1;
 		}
 		filenamesize[r] = buffer[s];
-		
+
 		num = (int)strtol(filenamesize, (char**)NULL,10); //File name size;
-		//printf("file name size: %i\n",num);
-		
-	 //Get filename size: 
+
+	 //Get filename size:
 		char filename[num+1];
 		s = s+1;
 		//Get File:
@@ -909,8 +1288,7 @@ char numberOfFiles[10];
 		char newfilename[num+25];
 		strcpy(newfilename, inital);
 		strcat(newfilename, filename);
-	
-		//printf("newfilename : %s\n", newfilename);
+
 		s = s+num+1;
 		remove(newfilename);
 		int fd = open(newfilename, O_CREAT|O_RDWR, 00700);
@@ -923,70 +1301,59 @@ char numberOfFiles[10];
 			s = s+1;
 		}
 		filenamesize[r] = buffer[s];
-		
+
 		num = (int)strtol(filenamesize, (char**)NULL,10); //File name size;
-		//printf("Data size: %i\n",num);
-		
+
 		//Get Data:
 		char fileData[num+1];
 		s = s+1;
-		
+
 		y =0;
 		for(y = s; y< s+num;y++)
 		{
 			fileData[y-s] = buffer[y];
 		}
 		fileData[num] ='\0';
-		//printf("Data : %s\n", fileData);
 		write(fd, fileData, strlen(fileData));
 		close(fd);
 		s = s+num+1;
-	} 
+	}
 }
 
 
 void ReGenerate_Server_Manifest(char* Proj_name)
 {
-	//Fix_Manifest(Proj_name);
 	const char *tab = "\t";
-	const char *Version = "0";
 	const char *newline = "\n";
-		
+
 	//Check if Client has manifest file or not:
 	char * pre = "./Server_Repository/";
-	char path[strlen(pre)+sizeof(Proj_name)]; //"./clinetrepo/projname
-	strcpy(path, pre);
-	strcat(path, Proj_name);
-	
-	char *Manifest = ".Manifest";
+	char path[strlen("./Server_Repository/")+sizeof(Proj_name)]; //"./clinetrepo/projname
+  sprintf(path, "./Server_Repository/%s", Proj_name);
+
 	char File_name[strlen(Proj_name)+15]; // Proj_name.Manifest
-	strcpy(File_name, Proj_name);
-	strcat(File_name, Manifest);
+  sprintf(File_name, "%s.Manifest", Proj_name);
+
 	if(File_Exists(File_name,path) == 1)
 	{
 		//printf("manifest File exists!\n");
 		//Get Manifest file info
 		File_Info *Array;
 		char File_Path[strlen(path)+strlen(File_name)+5];
-		strcpy(File_Path, path);
-		char *slash = "/"; 
-		strcat(File_Path,slash);
-		strcat(File_Path, File_name);
-		//printf("File_Path: %s\n",File_Path);
-		
+    sprintf(File_Path, "%s/%s",path, File_name);
+
 		int sizeofArray = 0;
 		char versionNum[10];
 		Array = Get_ManifestFile_Info(File_Path, &sizeofArray, versionNum);
-		//printf("size of array: %i",sizeofArray);
-		
+
 		 int i =0;
 		 //Check if File name in Manifest exists,
 		 //If it does than create newhash code for it,
-		 //and if not set Hashcode to 0, which indicates that the file in manifest 
+		 //and if not set Hashcode to 0, which indicates that the file in manifest
 		 //doesn't exists in Project Folder:
 		 int need_to_change =0;
   for(i=0; i<sizeofArray; i++)
-  {		//printf("(Array+i)->name: %s ,path: %s\n",(Array+i)->name,path);
+  {
 	  char newname[strlen((Array+i)->name)-strlen(Proj_name)];
 	  int k =0;
 	  int u =0;
@@ -995,14 +1362,12 @@ void ReGenerate_Server_Manifest(char* Proj_name)
 		  newname[u] = (Array+i)->name[k];
 		  u++;
 	  }
-	  //printf("newname: %s\n",newname);
 	  if(File_Exists(newname,path) == 1)
 	  {
 		  //Generate new Hash code for it:
-		  //printf("Generating New Hashcode\n");
 		  char newHashCode[40];
 		  Create_Hash((Array+i)->name,newHashCode);
-		  
+
 		  if(strcmp((Array+i)->Hashcode,newHashCode) != 1)
 		  {
 			  strcpy((Array+i)->Hashcode, newHashCode);
@@ -1020,7 +1385,7 @@ void ReGenerate_Server_Manifest(char* Proj_name)
 		  need_to_change = need_to_change+1;
 	  }
   }
-  
+
   if(need_to_change>0)
   {
   remove(File_Path);//Remove Old Manifest and add New Manifest:
@@ -1041,7 +1406,6 @@ void ReGenerate_Server_Manifest(char* Proj_name)
 	}
 		close(fdN);
   }
-		//printf("Done!\n");
 	}
 	else
 	{
@@ -1053,18 +1417,15 @@ void ReGenerate_Server_Manifest(char* Proj_name)
 //Hash: return string
 void Create_Hash(char* filename, char *Hash)
 {
-	//printf("filename : %s\n",filename);
-	//printf("Hash: %s\n",Hash);
-	char *init = "./Server_Repository/";
 	char filename_path[strlen(filename)+20];
-	strcpy(filename_path, init);
-	strcat(filename_path, filename);
+  sprintf(filename_path,"./Server_Repository/%s", filename);
+
 	int fdT = open(filename_path, O_RDWR, 00700);
 	int size;
 	struct stat st;
 	stat(filename_path, &st);
 	size = st.st_size;
-		
+
 	int status = -1;
 	char data[size+1];
 	do
@@ -1073,32 +1434,27 @@ void Create_Hash(char* filename, char *Hash)
 	}while(status > 0);
 	close(fdT);
 	data[size] = '\0';
-	//printf("Buffer in HSA:::: %s\n",data);
-	//printf("\n");	
-	//char data[100] = "Hello World";
+
 	int i = 0;
     int SHA_DIGEST_LENGTH =20;
     unsigned char temp[SHA_DIGEST_LENGTH];
     char buf[SHA_DIGEST_LENGTH*2];
-    
+
     memset(buf, 0x0, SHA_DIGEST_LENGTH*2);
     memset(temp, 0x0, SHA_DIGEST_LENGTH);
- 
+
     SHA1((unsigned char *)data, strlen(data), temp);
- 
+
     for (i=0; i < SHA_DIGEST_LENGTH; i++) {
         sprintf((char*)&(buf[i*2]), "%02x", temp[i]);
     }
-    
+
 	strcpy(Hash,buf);
-    //printf("SHA1 of %s is %s\n", data, buf);
-	
 }
 
 
 int StringCmp_For_Commit(const char *k, const char *ptr, int size)
 {
-	//printf("size:   %i\n",size);
   int j =0;
   int m;
   while(ptr[j] != '\0' || k[j] != '\0') // compare until either one or both of input string reaches end of the string
@@ -1117,7 +1473,6 @@ int StringCmp_For_Commit(const char *k, const char *ptr, int size)
       // Than string 1 is greater than string 2 therefore returns 1.
       else if(isupper(ptr[j])==0 && isupper(k[j])>0)
         {
-			//printf("ptr[%i]: %c, k[%i]: %c\n",j, ptr[j], j, k[j]);
           m =1;
           break;
         }
@@ -1131,7 +1486,6 @@ int StringCmp_For_Commit(const char *k, const char *ptr, int size)
 	  }
 	else if(ptr[j]<k[j])
 	  {
-		 //printf("ptr[%i]: %c, k[%i]: %c\n",j, ptr[j], j, k[j]);
 	    m= 1;
 	    break;
 	  }
@@ -1149,7 +1503,6 @@ int StringCmp_For_Commit(const char *k, const char *ptr, int size)
 }
 
   //This part check if one string has more character than other or not
- // printf("j = %i, size = %i, m == %i\n", j, size, m);
   if(m ==0)
     {
 		if(j<size)
@@ -1171,45 +1524,30 @@ int StringCmp_For_Commit(const char *k, const char *ptr, int size)
 //Proj_name: project name
 void Fix_Manifest(char *Proj_name)
 {
-		const char *tab = "\t";
-		const char *Version = "0";
-		const char *newline = "\n";
-		
-	//Check if Client has manifest file or not:
-	char * pre = "./Server_Repository/";
-	char path[strlen(pre)+sizeof(Proj_name)]; //"./clinetrepo/projname
-	strcpy(path, pre);
-	strcat(path, Proj_name);
-	
-	char *Manifest = ".Manifest";
+  // printf("Fix_Manifest\n" );
+	const char *tab = "\t";
+	const char *newline = "\n";
+
+	//Check if Server has manifest file or not:
+	char path[strlen("./Server_Repository/")+sizeof(Proj_name)]; //"./clinetrepo/projname
+  sprintf(path,"./Server_Repository/%s", Proj_name);
+
 	char File_name[strlen(Proj_name)+15]; // Proj_name.Manifest
-	strcpy(File_name, Proj_name);
-	strcat(File_name, Manifest);
+  sprintf(File_name, "%s.Manifest", Proj_name);
+
 	if(File_Exists(File_name,path) == 1)
 	{
-		//printf("manifest File exists!\n");
 		//Get Manifest file info
 		File_Info *Array;
 		char File_Path[strlen(path)+strlen(File_name)+5];
-		strcpy(File_Path, path);
-		char *slash = "/"; 
-		strcat(File_Path,slash);
-		strcat(File_Path, File_name);
-		//printf("File_Path: %s\n",File_Path);
-		
+    sprintf(File_Path, "%s/%s",path, File_name);
+
+
 		int sizeofArray = 0;
 		char versionNum[10];
 		Array = Get_ManifestFile_Info(File_Path, &sizeofArray, versionNum);
-		//printf("size of array: %i",sizeofArray);
-		
-		 int i =0;
-  /*for(i=0; i<sizeofArray; i++)
-  {
-	  printf("(Array+i)->name: %s\n",(Array+i)->name);
-	  printf("(Array+i)->Version: %s\n",(Array+i)->Version);
-	  printf("(Array+i)->Hashcode: %i\n",strlen((Array+i)->Hashcode));
-	  
-  }*/
+
+	int i =0;
 	int error = -1;
 	for(i=0; i<sizeofArray; i++)
 	{
@@ -1219,7 +1557,7 @@ void Fix_Manifest(char *Proj_name)
 			break;
 		}
 	}
-	
+
 	if(error != -1)
 	{
 	remove(File_Path);
@@ -1240,9 +1578,6 @@ void Fix_Manifest(char *Proj_name)
 	}
 	close(fdN);
 }
-	//printf("Error Index: %i\n",error);
-		
-		//printf("Done!\n");
 	}
 	else
 	{
@@ -1250,32 +1585,49 @@ void Fix_Manifest(char *Proj_name)
 	}
 }
 
+//Removes all files form older version folder which has version number gerater or equal to version_num;
+void Old_Version_Remove(char* Proj_name, int version_num)
+{
+    char path[strlen("./Server_Repository/Old_Version/")+sizeof(Proj_name)]; //"./Server_Repository/Old_Version/Proj_name
+    sprintf(path,"./Server_Repository/Old_Version/%s", Proj_name);
+
+    char new_File_Name[strlen("Version.txt")+20];
+    int No =version_num;
+    while(1)
+    {
+      sprintf(new_File_Name,"Version%d.txt", No);
+
+      if(File_Exists(new_File_Name, path) != 1)
+      {
+        break;
+      }
+      char remove_Path[strlen(path)+2+strlen(new_File_Name)];
+      sprintf(remove_Path, "%s/%s", path, new_File_Name);
+      remove(remove_Path);
+      No= No+1;
+    }
+}
+
 
 
 int Commit_Remove(char* Proj_name)
 {
-	
-		  char * pre = "./Server_Repository/";
 		  char *slash = "/";
-		  char path[strlen(pre)+sizeof(Proj_name)]; //"./clinetrepo/projname
-		  strcpy(path, pre);
-		  strcat(path, Proj_name);
-		  
+		  char path[strlen("./Server_Repository/")+sizeof(Proj_name)]; //"./clinetrepo/projname
+      sprintf(path, "./Server_Repository/%s", Proj_name );
+
 		  char File_Name[strlen(Proj_name)+20];
-		  char* commit = ".Commit";
-		  strcpy(File_Name, Proj_name);
-		  strcat(File_Name,commit);
-		
+      sprintf(File_Name, "%s.Commit", Proj_name);
+
 		  char new_File_Name[strlen(Proj_name)+20];
 		  int No =0;
-		  int matched = -1; 
 		  while(1)
-		  {		
-			  	char str[10];
+		  {
+			  char str[10];
 				sprintf(str, "%d", No);
 				strcpy(new_File_Name, File_Name);
 				strcat(new_File_Name,str);
-				
+
 				if(File_Exists(new_File_Name, path) != 1)
 				{
 					break;
@@ -1285,15 +1637,9 @@ int Commit_Remove(char* Proj_name)
 				strcat(remove_Path, slash);
 				strcat(remove_Path, new_File_Name);
 				remove(remove_Path);
-				No= No+1;				
+				No= No+1;
 		  }
-		 
+
 		return 1;
-		
+
 }
-
-
- void Write_Commit_tO_History()
- {
-	 
- }

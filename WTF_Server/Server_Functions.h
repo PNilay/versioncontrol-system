@@ -15,7 +15,7 @@
 #include <fcntl.h>
 #include <openssl/evp.h>
 
-typedef struct 
+typedef struct
 {
 	char *commit;
 	char *name;
@@ -38,6 +38,14 @@ typedef struct
 } connection_t2;
 
 //FUNCTION:
+void Remove_File_From_Manifest(char* Proj_name, char* filename);
+int Add_File_To_Manifest(char* Proj_name, char* filename);
+void Update_Manifest_Push(char* Proj_name);
+void Old_Version_Remove(char* Proj_name, int version_num);
+void free_commit_file_info(Commit_File_Info* Array, int size);
+void free_file_info(File_Info* Array, int size);
+void Save_Old_Version(char* Proj_name);
+void Remove_Old_files_Commit(char* Proj_name);
 int isDirectory(const char *path);
 int StringCmp(const char *k, const char *ptr);
 int Project_Exists(char *Project_Name, char *path);// To check if project exists in client side,

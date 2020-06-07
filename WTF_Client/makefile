@@ -12,4 +12,4 @@ Functions.o: Functions.c Functions.h
 	gcc -c -Wall Functions.c -lcrypto
 
 clean:
-	rm -f WTF *.o Configure.txt *.Manifest 
+	rm -f WTF *.o Configure.txt *.Manifest *.Update *.txt
